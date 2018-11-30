@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<!DOCTYPE mapper
+		PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+		"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ProductMapper">
+ 	
+ 	
+	<resultMap id="productSelectMap" type="com.model2.mvc.service.domain.Product">
+		<result property="fileName" 			column="image_file" 				jdbcType="VARCHAR"/>
+		<result property="manuDate"		column="manufacture_day" 		jdbcType="VARCHAR" />
+		<result property="price" 				column="price" 						jdbcType="NUMERIC" />
+		<result property="prodDetail" 		column="prod_detail" 				jdbcType="VARCHAR" />
+		<result property="prodName" 		column="prod_name" 			jdbcType="VARCHAR" />
+		<result property="prodNo" 			column="prod_no" 				jdbcType="NUMERIC" />
+		<result property="regDate" 			column="reg_date" 				jdbcType="VARCHAR" />
+		<result property="proTranCode" 	column="tran_status_code" 		jdbcType="NUMERIC"  />
+		<result property="stock" 				column="stock" 					jdbcType="NUMERIC"  />
+	</resultMap>
+	
+	<!-- SQL : INSERT -->
+	<insert 	id="addProduct"		parameterType="com.model2.mvc.service.domain.Product" >
+	 	INSERT
+		INTO product( prod_no , prod_name , prod_detail , manufacture_day , price, image_file, reg_date,stock) 
+		VALUES	 (seq_product_prod_no.nextval, #{prodName} , #{prodDetail} , TO_DATE(#{manuDate},'YYYY-MM-DD'), #{price:INTEGER} , 
+							#{fileName} , SYSDATE, #{stock})
+	 </insert>
+	
+	 <!-- SQL : SELECT ONE -->
+
+	 	 <select 	id="getProduct"	parameterType="int"	resultMap="productSelectMap">
+		SELECT prod_no, prod_name, image_file, prod_detail, manufacture_day, price, reg_date, stock
+		 FROM product 
+		 WHERE prod_no= #{value}
+	 </select>
+	
+	  <!--  SQL : UPDATE-->
+	 <update	id="updateProduct"	parameterType="com.model2.mvc.service.domain.Product"  >
+	   	UPDATE product
+	   	<set>
+			prod_name	=	 #{prodName},
+			prod_detail 	= 	#{prodDetail} ,
+			manufacture_day	=	TO_DATE(#{manuDate},'YYYY-MM-DD'),
+			price	=	#{price:INTEGER},
+			stock  =  #{stock}
+			 <if test="fileName != '' ">
+			,image_file	=	#{fileName}
+			</if>
+	   	</set>
+	   	WHERE prod_no = #{prodNo}
+	 </update>
+	 
+	<!-- SQL : SELECT LIST 오토컴플륏!!!!!!! -->
+	<select id="autocomplete" parameterType="String" resultMap="productSelectMap">
+	 	 select prod_name from product where prod_name LIKE '%'||#{searchKeyword}||'%'
+	</select>
+	
+	
+	<!-- SQL : SELECT LIST -->
+	<select  id="getProductList"  parameterType="search"	resultMap="productSelectMap">
+	  		SELECT *
+	  	FROM (	SELECT inner_table.* , ROWNUM AS row_seq
+	  					FROM (SELECT p.prod_no , p.prod_name, p.prod_detail,p.stock, p.manufacture_day, p.price, p.image_file, p.reg_date 
+	  								FROM product p
+											<where>
+												 
+												 	
+												 <if test="searchCondition != null">
+													<if test="searchCondition == 0 and searchKeyword !='' ">
+										 				 AND p.prod_no LIKE '%'||#{searchKeyword}||'%' 
+													</if>
+													<if test="searchCondition == 1 and searchKeyword !='' ">
+										 				 AND p.prod_name LIKE '%'||#{searchKeyword}||'%' 
+													</if>
+													<if test="searchCondition == 2 and searchKeyword !='' ">
+										 				AND p.price LIKE '%'||#{searchKeyword}||'%'
+													</if>
+												</if>
+												</where>
+											<choose>
+											<when test="order !=null and order=='priceDesc'">
+												order by p.price Desc
+											</when>
+											<when test="order != null and order == 'priceAsc' ">
+												order by p.price Asc
+											</when>
+											<otherwise>
+												order by p.prod_no DESC
+											</otherwise> </choose>
+											) inner_table
+						WHERE ROWNUM &lt;= #{endRowNum} )
+		WHERE row_seq BETWEEN #{startRowNum} AND #{endRowNum} 
+	 </select>
+
+	 		<!-- SQL : SELECT ROW Count	    -->
+	 <select  id="getTotalCount"  parameterType="search"	 resultType="int">
+	  	SELECT COUNT(*)
+	  	FROM(	SELECT p.prod_no,p.stock, p.prod_name, p.prod_detail, p.manufacture_day, p.price, p.image_file, p.reg_date, t.tran_status_code 
+	  	FROM product p, transaction t 
+											<where>
+												 	p.prod_no=t.prod_no(+)
+												 	
+												 <if test="searchCondition != null">
+													<if test="searchCondition == 0 and searchKeyword !='' ">
+										 				 AND p.prod_no LIKE '%'||#{searchKeyword}||'%' 
+													</if>
+													<if test="searchCondition == 1 and searchKeyword !='' ">
+										 				 AND p.prod_name LIKE '%'|| #{searchKeyword}||'%' 
+													</if>
+													<if test="searchCondition == 2 and searchKeyword !='' ">
+										 				AND p.price LIKE '%'||#{searchKeyword}||'%'
+													</if>
+													</if>
+												</where>
+											<choose>
+											<when test="order !=null and order=='priceDesc'">
+												order by p.price Desc
+											</when>
+											<when test="order != null and order == 'priceAsc' ">
+												order by p.price Asc
+											</when>
+											<otherwise>
+												order by p.prod_no
+											</otherwise> </choose>) countTable						
+	 </select>
+	
+</mapper>
